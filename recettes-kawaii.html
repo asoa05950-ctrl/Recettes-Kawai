@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>App Recettes Kawaii 🌸🍰</title>
+
+<!-- Favicon / icône onglet -->
+<link rel="icon" href="icon.png" type="image/png">
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#ff69b4">
+
+
+
+
+
+<style>
+body {
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+    margin: 0;
+    background: linear-gradient(-45deg,#ffdee9,#b5fffc,#fff0f5,#ffe4e1);
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+}
+@keyframes gradient {
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+.container {
+    max-width: 500px;
+    margin: 30px auto;
+    padding: 20px;
+}
+button{
+    padding:10px;
+    border:none;
+    border-radius:12px;
+    background-color:#ffb6c1;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+    margin:5px 0;
+}
+button:hover{background-color:#ff69b4;}
+input, textarea{
+    width:100%;
+    padding:10px;
+    border-radius:12px;
+    border:2px solid #ffb6c1;
+    margin:5px 0;
+    background-color:#fffaf0;
+    font-size:16px;
+}
+.recipe-card{
+    background-color:#ffe4e1;
+    border-radius:15px;
+    padding:15px;
+    margin:10px 0;
+    box-shadow:0 5px 10px rgba(0,0,0,0.05);
+    position:relative;
+}
+.recipe-card img{
+    width:100%;
+    border-radius:12px;
+    margin-bottom:10px;
+}
+.delete-btn{
+    position:absolute;
+    top:10px;
+    right:10px;
+    background-color:#ff69b4;
+    color:white;
+    border:none;
+    border-radius:50%;
+    cursor:pointer;
+    padding:5px 10px;
+}
+.delete-btn:hover{transform:scale(1.2);}
+.confetti{
+    position:absolute;
+    width:10px;height:10px;
+    border-radius:50%;
+    pointer-events:none;
+    animation:fall 2s linear forwards;
+}
+@keyframes fall{
+    0%{transform:translateY(0) rotate(0deg);opacity:1;}
+    100%{transform:translateY(400px) rotate(360deg);opacity:0;}
+}
+#imagePreview{
+    border:3px dashed #ffb6c1;
+    box-shadow:0 5px 10px rgba(255,182,193,0.3);
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Page Accueil -->
+    <div id="homePage">
+        <h1 style="text-align:center;color:#ff69b4;">🌸 App Recettes Kawaii 🍰</h1>
+        <button onclick="showPage('addPage')">➕ Ajouter Recette</button>
+        <button onclick="showPage('listPage')">📖 Mes Recettes</button>
+    </div>
+
+    <!-- Page Ajouter Recette -->
+    <div id="addPage" style="display:none;">
+        <h2 style="color:#ff69b4;">Ajouter une Recette</h2>
+        <input type="text" id="title" placeholder="Nom du plat 🍰">
+        <input type="text" id="category" placeholder="Catégorie 🥗">
+        <input type="text" id="prepTime" placeholder="Temps de préparation ⏱️">
+        <input type="text" id="cookTime" placeholder="Temps de cuisson ⏱️">
+        <textarea id="ingredients" rows="3" placeholder="Ingrédients 📝"></textarea>
+        <textarea id="instructions" rows="4" placeholder="Instructions ✨"></textarea>
+        <textarea id="notes" rows="2" placeholder="Notes 🧸"></textarea>
+        <input type="file" id="image" accept="image/*" onchange="previewImage(event)">
+        <img id="imagePreview" src="" style="display:none;">
+        <button onclick="addRecipe()">Ajouter 🎀</button>
+        <button onclick="showPage('homePage')">🏠 Retour</button>
+    </div>
+
+    <!-- Page Liste Recettes -->
+    <div id="listPage" style="display:none;">
+        <h2 style="color:#ff69b4;">Mes Recettes 🌸</h2>
+        <button onclick="deleteAllRecipes()" style="background-color:#ff7f7f;">🗑️ Supprimer toutes les recettes</button>
+        <div id="recipesList"></div>
+        <button onclick="showPage('homePage')">🏠 Retour</button>
+    </div>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js')
+    .then(() => console.log('Service Worker enregistré!'))
+    .catch(err => console.log('Erreur SW:', err));
+}
+
+  
+let recipes = [];
+
+window.onload = () => {
+    const saved = localStorage.getItem('recipes');
+    if(saved) recipes = JSON.parse(saved);
+    recipes.forEach(r => renderRecipe(r));
+};
+
+function showPage(pageId){
+    document.getElementById('homePage').style.display='none';
+    document.getElementById('addPage').style.display='none';
+    document.getElementById('listPage').style.display='none';
+    document.getElementById(pageId).style.display='block';
+}
+
+function previewImage(event){
+    const preview = document.getElementById('imagePreview');
+    const file = event.target.files[0];
+    if(file){
+        const reader = new FileReader();
+        reader.onload = function(e){
+            preview.src = e.target.result;
+            preview.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    } else {
+        preview.src = '';
+        preview.style.display = 'none';
+    }
+}
+
+function addRecipe(){
+    const title=document.getElementById('title').value.trim();
+    const category=document.getElementById('category').value.trim();
+    const prep=document.getElementById('prepTime').value.trim();
+    const cook=document.getElementById('cookTime').value.trim();
+    const ingredients=document.getElementById('ingredients').value.trim();
+    const instructions=document.getElementById('instructions').value.trim();
+    const notes=document.getElementById('notes').value.trim();
+    const imageInput = document.getElementById('image');
+    if(!title || !ingredients) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const imageData = e.target.result;
+        const recipe = { title, category, prep, cook, ingredients, instructions, notes, imageData };
+        recipes.unshift(recipe);
+        localStorage.setItem('recipes', JSON.stringify(recipes));
+        renderRecipe(recipe);
+        for(let i=0;i<20;i++) createConfetti();
+
+        document.getElementById('title').value='';
+        document.getElementById('category').value='';
+        document.getElementById('prepTime').value='';
+        document.getElementById('cookTime').value='';
+        document.getElementById('ingredients').value='';
+        document.getElementById('instructions').value='';
+        document.getElementById('notes').value='';
+        document.getElementById('image').value='';
+        document.getElementById('imagePreview').src = '';
+        document.getElementById('imagePreview').style.display = 'none';
+
+        showPage('listPage');
+    };
+    if(imageInput.files[0]) reader.readAsDataURL(imageInput.files[0]);
+    else reader.onload({target:{result:null}});
+}
+
+function renderRecipe(recipe){
+    const card=document.createElement('div');
+    card.className='recipe-card';
+    let imageHTML = recipe.imageData ? `<img src="${recipe.imageData}">` : '';
+    card.innerHTML = imageHTML +
+        `<strong>🍓 ${recipe.title}</strong><br>
+         <em>Catégorie:</em> ${recipe.category} | <em>Prep:</em> ${recipe.prep} | <em>Cook:</em> ${recipe.cook}<br>
+         <strong>Ingrédients:</strong><br>${recipe.ingredients.replace(/\n/g,'<br>')}<br>
+         <strong>Instructions:</strong><br>${recipe.instructions.replace(/\n/g,'<br>')}<br>
+         <strong>Notes:</strong><br>${recipe.notes}`;
+
+    const delBtn=document.createElement('button');
+    delBtn.className='delete-btn';
+    delBtn.textContent='❌';
+    delBtn.onclick=()=>{
+        const index = recipes.indexOf(recipe);
+        if(index>-1){recipes.splice(index,1);localStorage.setItem('recipes', JSON.stringify(recipes));}
+        card.remove();
+    };
+    card.appendChild(delBtn);
+    document.getElementById('recipesList').prepend(card);
+}
+
+function deleteAllRecipes(){
+    if(confirm('Voulez-vous vraiment supprimer toutes les recettes ? 🌸')){
+        recipes = [];
+        localStorage.removeItem('recipes');
+        document.getElementById('recipesList').innerHTML = '';
+    }
+}
+
+function createConfetti(){
+    const container=document.querySelector('.container');
+    const confetti=document.createElement('div');
+    confetti.className='confetti';
+    confetti.style.left=Math.random()*480+'px';
+    confetti.style.backgroundColor=randomColor();
+    container.appendChild(confetti);
+    setTimeout(()=>confetti.remove(),2000);
+}
+
+function randomColor(){
+    const colors=['#ff69b4','#ffb6c1','#ffdab9','#fff0f5','#b5fffc','#ffe4e1'];
+    return colors[Math.floor(Math.random()*colors.length)];
+}
+</script>
+</body>
+</html>
